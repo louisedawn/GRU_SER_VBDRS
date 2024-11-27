@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Emotion Recognition</title>
+</head>
+<body>
+    <h1>Voice-Based Danger Recognition System</h1>
+    <h2>Speech Emotion Recognition</h2>
+    <h3>Original Gated Recurrent Unit Model</h3>
+
+    <form id="uploadForm" enctype="multipart/form-data">
+        <label>Record or Upload Audio (Minimum 3 seconds):</label><br><br>
+        <input type="file" name="audio" accept="audio/*"><br><br>
+        <button type="button" onclick="uploadAudio()">Analyze</button>
+    </form>
+
+    <div id="result">
+        <h3>Results</h3>
+        <table>
+            <tr>
+                <th>Emotion</th>
+                <th>Percentage</th>
+            </tr>
+            <tbody id="resultsTable"></tbody>
+        </table>
+        <h4>Spectrogram:</h4>
+        <img id="spectrogramImage" src="" alt="Spectrogram" style="display:none;">
+    </div>
+
+    <script>
+        async function uploadAudio() {
+            const form = document.getElementById('uploadForm');
+            const formData = new FormData(form);
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                const resultsTable = document.getElementById('resultsTable');
+                resultsTable.innerHTML = '';
+                for (const [emotion, percentage] of Object.entries(data.emotions)) {
+                    const row = `<tr><td>${emotion}</td><td>${percentage}%</td></tr>`;
+                    resultsTable.innerHTML += row;
+                }
+
+                const spectrogramImage = document.getElementById('spectrogramImage');
+                spectrogramImage.src = data.spectrogram;
+                spectrogramImage.style.display = 'block';
+            } else {
+                alert(data.error);
+            }
+        }
+    </script>
+</body>
+</html>
