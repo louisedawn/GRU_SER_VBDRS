@@ -3,6 +3,6 @@ AN ENHANCEMENT OF GATED RECURRENT UNIT (GRU) FOR SPEECH EMOTION RECOGNITION IN T
 
 Steps for Running:
 1. clone repository
-2. pip install flask pydub numpy tensorflow keras librosa matplotlib
+2. pip install -r requirements.txt
 3. run app.py
 
