@@ -30,35 +30,25 @@ def preprocess_audio(file_path):
 def index():
     return render_template('index.html')
 
-@app.route('/upload', methods=['POST'])
-def upload_audio():
-    if 'audio' not in request.files:
+@app.route('/analyze', methods=['POST'])
+def analyze_audio():
+    audio_file = request.files['audio']
+    if not audio_file:
         return jsonify({'error': 'No audio file provided'}), 400
 
-    audio_file = request.files['audio']
-    if audio_file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
-
-    # Save the file
-    filename = secure_filename(audio_file.filename)
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    # Save the audio file
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'temp_audio.wav')
     audio_file.save(file_path)
 
     # Preprocess and predict
     audio_features = preprocess_audio(file_path)
     predictions = model.predict(audio_features)[0]
-    emotion_percentages = {emotion: round(pred * 100, 2) for emotion, pred in zip(emotion_labels, predictions)}
 
-    # Generate spectrogram
-    y, sr = librosa.load(file_path, duration=3, offset=0.5)
-    plt.figure(figsize=(10, 4))
-    plt.specgram(y, NFFT=2048, Fs=2, Fc=0, noverlap=128, cmap='inferno', sides='default', mode='default', scale='dB')
-    plt.axis('off')
-    spectrogram_path = os.path.join(app.config['UPLOAD_FOLDER'], 'spectrogram.png')
-    plt.savefig(spectrogram_path)
-    plt.close()
+    # Check if the detected emotion is "Fear"
+    fear_index = emotion_labels.index('Fear')
+    is_danger = predictions[fear_index] > 0.5  # Threshold of 50%
 
-    return jsonify({'emotions': emotion_percentages, 'spectrogram': spectrogram_path})
+    return jsonify({'danger': is_danger})
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -3,57 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speech Emotion Recognition</title>
+    <title>Voice-Based Danger Recognition</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
     <h1>Voice-Based Danger Recognition System</h1>
     <h2>Speech Emotion Recognition</h2>
-    <h3>Original Gated Recurrent Unit Model</h3>
+    <h3>Original Gated Recurrent Unit</h3>
 
-    <form id="uploadForm" enctype="multipart/form-data">
-        <label>Record or Upload Audio (Minimum 3 seconds):</label><br><br>
-        <input type="file" name="audio" accept="audio/*"><br><br>
-        <button type="button" onclick="uploadAudio()">Analyze</button>
-    </form>
+    <button id="recordBtn">Record</button>
+    <canvas id="waveform" width="500" height="100"></canvas>
 
-    <div id="result">
-        <h3>Results</h3>
-        <table>
-            <tr>
-                <th>Emotion</th>
-                <th>Percentage</th>
-            </tr>
-            <tbody id="resultsTable"></tbody>
-        </table>
-        <h4>Spectrogram:</h4>
-        <img id="spectrogramImage" src="" alt="Spectrogram" style="display:none;">
-    </div>
+    <h3 id="result"></h3>
 
     <script>
-        async function uploadAudio() {
-            const form = document.getElementById('uploadForm');
-            const formData = new FormData(form);
-            const response = await fetch('/upload', {
-                method: 'POST',
-                body: formData
-            });
-            const data = await response.json();
+        const recordBtn = document.getElementById('recordBtn');
+        const canvas = document.getElementById('waveform');
+        const resultText = document.getElementById('result');
+        const ctx = canvas.getContext('2d');
 
-            if (response.ok) {
-                const resultsTable = document.getElementById('resultsTable');
-                resultsTable.innerHTML = '';
-                for (const [emotion, percentage] of Object.entries(data.emotions)) {
-                    const row = `<tr><td>${emotion}</td><td>${percentage}%</td></tr>`;
-                    resultsTable.innerHTML += row;
+        let chunks = [];
+        let mediaRecorder;
+
+        async function startRecording() {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+            mediaRecorder.onstop = async () => {
+                const blob = new Blob(chunks, { type: 'audio/wav' });
+                chunks = [];
+                const formData = new FormData();
+                formData.append('audio', blob, 'audio.wav');
+
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    resultText.textContent = data.danger ? 'Danger Detected!' : 'No Danger Detected.';
+                    resultText.style.color = data.danger ? 'red' : 'green';
+                } else {
+                    resultText.textContent = data.error || 'An error occurred.';
+                    resultText.style.color = 'black';
+                }
+            };
+
+            // Start recording and visualizing
+            mediaRecorder.start();
+            visualize(stream);
+        }
+
+        function visualize(stream) {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const analyser = audioCtx.createAnalyser();
+            const source = audioCtx.createMediaStreamSource(stream);
+            source.connect(analyser);
+
+            analyser.fftSize = 2048;
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            const draw = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                analyser.getByteTimeDomainData(dataArray);
+
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#000';
+                ctx.beginPath();
+
+                const sliceWidth = canvas.width / bufferLength;
+                let x = 0;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = (v * canvas.height) / 2;
+
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+
+                    x += sliceWidth;
                 }
 
-                const spectrogramImage = document.getElementById('spectrogramImage');
-                spectrogramImage.src = data.spectrogram;
-                spectrogramImage.style.display = 'block';
-            } else {
-                alert(data.error);
-            }
+                ctx.lineTo(canvas.width, canvas.height / 2);
+                ctx.stroke();
+
+                requestAnimationFrame(draw);
+            };
+
+            draw();
         }
+
+        recordBtn.addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                recordBtn.textContent = 'Record';
+            } else {
+                startRecording();
+                recordBtn.textContent = 'Stop';
+            }
+        });
     </script>
 </body>
 </html>
