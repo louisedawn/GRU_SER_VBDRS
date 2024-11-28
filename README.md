@@ -11,3 +11,14 @@ Steps for Running:
 4. pip install -r requirements.txt or pip install flask pydub numpy tensorflow keras librosa matplotlib
 5. run app.py
 
+
+
+if venv issues/not showing in terminal:
+- Open PowerShell as Administrator:
+- Press Windows + X and select Windows PowerShell (Admin) or Terminal (Admin).
+- type: Get-ExecutionPolicy
+      The result will likely be Restricted.
+- type: Set-ExecutionPolicy RemoteSigned
+      If prompted, type Y and press Enter to confirm.
+- Activate the Virtual Environment: Now try activating the virtual environment again:
+      type: venv\Scripts\activate
