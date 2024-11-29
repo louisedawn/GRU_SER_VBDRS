@@ -7,7 +7,10 @@ Steps for Running:
 3. create virtual env using python 10
       - python -m venv venv
       - venv\Scripts\activate
-      - pip install tensorflow
+      - pip install --upgrade pip
+      - pip install setuptools
+      - pip install --upgrade pip setuptools
+      - python -m ensurepip --upgrade
 4. pip install -r requirements.txt or pip install flask pydub numpy tensorflow keras librosa matplotlib
 5. run app.py
 
