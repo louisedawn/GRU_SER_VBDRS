@@ -15,8 +15,9 @@ Steps for Running/Error-free installations:
       - pip install --upgrade pip setuptools
       - python -m ensurepip --upgrade
 7. pip install -r requirements.txt or pip install flask pydub numpy tensorflow keras librosa matplotlib
-8. run app.py
-9. dont commit/push any edits in the app.py, index.html, or requirements.txt if project is in venv.
+8. if errors with tensorflow-cpu, install it individually, tensorflow can be installed too if there are import errors.
+9. run app.py
+10. dont commit/push any edits in the app.py, index.html, or requirements.txt if project is in venv.
 
 
 
