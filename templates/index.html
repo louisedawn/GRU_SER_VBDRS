@@ -13,6 +13,9 @@
             border: 1px solid #ccc;
             margin-top: 20px;
         }
+        #uploadForm {
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -20,129 +23,154 @@
     <h2>Speech Emotion Recognition</h2>
     <h3>Original Gated Recurrent Unit</h3>
 
+    <!-- Record Button -->
     <button id="recordBtn">Record</button>
     <canvas id="waveform" width="500" height="100"></canvas>
 
+    <!-- File Upload Form -->
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" id="audioFile" name="audio" accept="audio/*">
+        <button type="submit">Upload Audio</button>
+    </form>
+    <br><br><br><br>
     <h3 id="result"></h3>
     <p id="emotion"></p> <!-- Added to display the detected emotion -->
 
     <script>
         const recordBtn = document.getElementById('recordBtn');
         const canvas = document.getElementById('waveform');
+        const uploadForm = document.getElementById('uploadForm');
         const resultText = document.getElementById('result');
-        const emotionText = document.getElementById('emotion');  // Reference to emotion text
+        const emotionText = document.getElementById('emotion');
         const ctx = canvas.getContext('2d');
-    
+
         let chunks = [];
         let mediaRecorder;
-        let animationFrameId;  // To store the animation frame ID
-    
-        let isRecording = false;  // Flag to track if recording is in progress
-    
+        let animationFrameId;
+
+        let isRecording = false;
+
+        // Functionality for recording
         async function startRecording() {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
-    
+
             mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
             mediaRecorder.onstop = async () => {
                 const blob = new Blob(chunks, { type: 'audio/wav' });
                 chunks = [];
                 const formData = new FormData();
                 formData.append('audio', blob, 'audio.wav');
-    
+
                 const response = await fetch('/analyze', {
                     method: 'POST',
                     body: formData
                 });
-    
-                const data = await response.json();
-                if (response.ok) {
-                    resultText.textContent = data.danger ? 'Danger Detected!' : 'No Danger Detected.';
-                    resultText.style.color = data.danger ? 'red' : 'green';
 
-                    // Display the detected emotion
-                    emotionText.textContent = `Detected Emotion: ${data.emotion}`;
-                    emotionText.style.color = 'black';
-                } else {
-                    resultText.textContent = data.error || 'An error occurred.';
-                    resultText.style.color = 'black';
-                }
+                const data = await response.json();
+                displayResults(data);
             };
-    
-            // Clear previous result when starting a new recording
+
             resultText.textContent = '';
-            emotionText.textContent = '';  // Clear emotion text
-    
-            // Start recording and visualizing
+            emotionText.textContent = '';
             mediaRecorder.start();
             isRecording = true;
-            visualize(stream);  // Start visualization
+            visualize(stream);
         }
-    
+
         function stopVisualization() {
             if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);  // Stop the animation frame loop
+                cancelAnimationFrame(animationFrameId);
             }
-            isRecording = false;  // Set recording flag to false
+            isRecording = false;
         }
-    
+
         function visualize(stream) {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const analyser = audioCtx.createAnalyser();
             const source = audioCtx.createMediaStreamSource(stream);
             source.connect(analyser);
-    
+
             analyser.fftSize = 2048;
             const bufferLength = analyser.frequencyBinCount;
             const dataArray = new Uint8Array(bufferLength);
-    
+
             const draw = () => {
-                if (!isRecording) {
-                    return;  // Stop drawing if not recording
-                }
-    
+                if (!isRecording) return;
+
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
                 analyser.getByteTimeDomainData(dataArray);
-    
+
                 ctx.lineWidth = 2;
                 ctx.strokeStyle = '#000';
                 ctx.beginPath();
-    
+
                 const sliceWidth = canvas.width / bufferLength;
                 let x = 0;
-    
+
                 for (let i = 0; i < bufferLength; i++) {
                     const v = dataArray[i] / 128.0;
                     const y = (v * canvas.height) / 2;
-    
+
                     if (i === 0) {
                         ctx.moveTo(x, y);
                     } else {
                         ctx.lineTo(x, y);
                     }
-    
+
                     x += sliceWidth;
                 }
-    
+
                 ctx.lineTo(canvas.width, canvas.height / 2);
                 ctx.stroke();
-    
+
                 animationFrameId = requestAnimationFrame(draw);
             };
-    
+
             draw();
         }
-    
+
+        function displayResults(data) {
+            if (data.danger) {
+                resultText.textContent = 'Danger Detected!';
+                resultText.style.color = 'red';
+            } else {
+                resultText.textContent = 'No Danger Detected.';
+                resultText.style.color = 'green';
+            }
+            emotionText.textContent = `Detected Emotion: ${data.emotion}`;
+        }
+
         recordBtn.addEventListener('click', () => {
             if (mediaRecorder && mediaRecorder.state === 'recording') {
                 mediaRecorder.stop();
-                stopVisualization();  // Stop visualization when recording stops
+                stopVisualization();
                 recordBtn.textContent = 'Record';
             } else {
                 startRecording();
                 recordBtn.textContent = 'Stop';
             }
+        });
+
+        // Functionality for uploading a file
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const audioFile = document.getElementById('audioFile').files[0];
+            if (!audioFile) {
+                resultText.textContent = 'Please upload a valid audio file.';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('audio', audioFile);
+
+            const response = await fetch('/analyze', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            displayResults(data);
         });
     </script>
 </body>
