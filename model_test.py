@@ -4,7 +4,7 @@ model_path = 'gru_emotion_model.h5'  # Replace with your model file path
 
 try:
     with h5py.File(model_path, 'r') as h5_file:
-        # Check for Keras version
+        # Check for Keras version, 3.3.3 is needed
         if 'keras_version' in h5_file.attrs:
             keras_version = h5_file.attrs['keras_version']
             print(f"Keras version: {keras_version}")
