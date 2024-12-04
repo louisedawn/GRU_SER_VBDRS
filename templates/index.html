@@ -16,6 +16,23 @@
         #uploadForm {
             margin-top: 20px;
         }
+        .table-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 45%;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
     </style>
 </head>
 <body>
@@ -25,8 +42,8 @@
 
     <!-- Model Selection -->
     <h4>Select Model:
-    <input type="radio" name="model" value="original" id="originalModel" checked> Original GRU
-    <input type="radio" name="model" value="enhanced" id="enhancedModel"> Enhanced GRU
+        <input type="radio" name="model" value="original" id="originalModel" checked> Original GRU
+        <input type="radio" name="model" value="enhanced" id="enhancedModel"> Enhanced GRU
     </h4>
     
     <!-- Record Button -->
@@ -38,10 +55,49 @@
         <input type="file" id="audioFile" name="audio" accept="audio/*">
         <button type="submit">Upload Audio</button>
     </form>
+    
     <br><br><br>
+    
     <h3 id="result"></h3>
-    <p id="emotion"></p> <!-- Added to display the detected emotion -->
-    <p id="probability"></p> 
+    <p id="emotion"></p>
+    <p id="probability"></p>
+
+    <!-- History Logs -->
+    <div class="table-container">
+        <!-- Original Model History -->
+        <div>
+            <h3>Original Model History</h3>
+            <table id="originalHistory">
+                <thead>
+                    <tr>
+                        <th>Danger</th>
+                        <th>Emotion</th>
+                        <th>Probability</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Results will be added here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Enhanced Model History -->
+        <div>
+            <h3>Enhanced Model History</h3>
+            <table id="enhancedHistory">
+                <thead>
+                    <tr>
+                        <th>Danger</th>
+                        <th>Emotion</th>
+                        <th>Probability</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Results will be added here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
 
     <script>
         const recordBtn = document.getElementById('recordBtn');
@@ -50,6 +106,8 @@
         const resultText = document.getElementById('result');
         const emotionText = document.getElementById('emotion');
         const probabilityText = document.getElementById('probability');
+        const originalHistory = document.getElementById('originalHistory').getElementsByTagName('tbody')[0];
+        const enhancedHistory = document.getElementById('enhancedHistory').getElementsByTagName('tbody')[0];
         const ctx = canvas.getContext('2d');
 
         let chunks = [];
@@ -80,7 +138,7 @@
                 });
 
                 const data = await response.json();
-                displayResults(data);
+                displayResults(data, selectedModel);
             };
 
             resultText.textContent = '';
@@ -143,18 +201,30 @@
             draw();
         }
 
-        function displayResults(data) {
-            if (data.danger) {
-                resultText.textContent = 'Danger Detected!';
-                resultText.style.color = 'red';
-            } else {
-                resultText.textContent = 'No Danger Detected.';
-                resultText.style.color = 'green';
-            }
+        function displayResults(data, model) {
+            // Determine the danger message and display results
+            const dangerText = data.danger ? 'Danger Detected!' : 'No Danger Detected.';
+            const dangerColor = data.danger ? 'red' : 'green';
+
+            resultText.textContent = dangerText;
+            resultText.style.color = dangerColor;
             emotionText.textContent = `Detected Emotion: ${data.emotion}`;
-            // emotionText.style.color = 'orange';
             probabilityText.textContent = `Probability Rate: ${(data.probability * 100).toFixed(2)}%`;
             probabilityText.style.color = 'blue';
+
+            // Add results to the corresponding history table
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td>${dangerText}</td>
+                <td>${data.emotion}</td>
+                <td>${(data.probability * 100).toFixed(2)}%</td>
+            `;
+
+            if (model === 'original') {
+                originalHistory.appendChild(newRow);
+            } else {
+                enhancedHistory.appendChild(newRow);
+            }
         }
 
         recordBtn.addEventListener('click', () => {
@@ -170,33 +240,32 @@
 
         // Functionality for uploading a file
         uploadForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+            e.preventDefault();
 
-    // Get the selected model from radio buttons
-    const selectedModel = document.querySelector('input[name="model"]:checked').value;
-    
-    const audioFile = document.getElementById('audioFile').files[0];
-    if (!audioFile) {
-        resultText.textContent = 'Please upload a valid audio file.';
-        return;
-    }
+            // Get the selected model from radio buttons
+            const selectedModel = document.querySelector('input[name="model"]:checked').value;
 
-    const formData = new FormData();
-    formData.append('audio', audioFile);
-    formData.append('model', selectedModel);  // Append the selected model to the form data
+            const audioFile = document.getElementById('audioFile').files[0];
+            if (!audioFile) {
+                resultText.textContent = 'Please upload a valid audio file.';
+                return;
+            }
 
-    const response = await fetch('/analyze', {
-        method: 'POST',
-        body: formData
-    });
+            const formData = new FormData();
+            formData.append('audio', audioFile);
+            formData.append('model', selectedModel);  // Append the selected model to the form data
 
-    const data = await response.json();
-    resultText.textContent = '';
-    emotionText.textContent = '';
-    probabilityText.textContent = '';
-    displayResults(data);
-});
+            const response = await fetch('/analyze', {
+                method: 'POST',
+                body: formData
+            });
 
+            const data = await response.json();
+            resultText.textContent = '';
+            emotionText.textContent = '';
+            probabilityText.textContent = '';
+            displayResults(data, selectedModel);
+        });
     </script>
 </body>
 </html>
