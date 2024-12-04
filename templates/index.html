@@ -21,8 +21,14 @@
 <body>
     <h1>Voice-Based Danger Recognition System</h1>
     <h2>Speech Emotion Recognition</h2>
-    <h3>Original Gated Recurrent Unit</h3>
+    <h3 style="color: rgb(31, 31, 223);">Gated Recurrent Unit</h3>
 
+    <!-- Model Selection -->
+    <h4>Select Model:
+    <input type="radio" name="model" value="original" id="originalModel" checked> Original GRU
+    <input type="radio" name="model" value="enhanced" id="enhancedModel"> Enhanced GRU
+    </h4>
+    
     <!-- Record Button -->
     <button id="recordBtn">Record</button>
     <canvas id="waveform" width="500" height="100"></canvas>
@@ -32,9 +38,10 @@
         <input type="file" id="audioFile" name="audio" accept="audio/*">
         <button type="submit">Upload Audio</button>
     </form>
-    <br><br><br><br>
+    <br><br><br>
     <h3 id="result"></h3>
     <p id="emotion"></p> <!-- Added to display the detected emotion -->
+    <p id="probability"></p> 
 
     <script>
         const recordBtn = document.getElementById('recordBtn');
@@ -42,6 +49,7 @@
         const uploadForm = document.getElementById('uploadForm');
         const resultText = document.getElementById('result');
         const emotionText = document.getElementById('emotion');
+        const probabilityText = document.getElementById('probability');
         const ctx = canvas.getContext('2d');
 
         let chunks = [];
@@ -62,6 +70,10 @@
                 const formData = new FormData();
                 formData.append('audio', blob, 'audio.wav');
 
+                // Get the selected model from radio buttons
+                const selectedModel = document.querySelector('input[name="model"]:checked').value;
+                formData.append('model', selectedModel);  // Append the selected model to the form data
+
                 const response = await fetch('/analyze', {
                     method: 'POST',
                     body: formData
@@ -73,6 +85,7 @@
 
             resultText.textContent = '';
             emotionText.textContent = '';
+            probabilityText.textContent = '';
             mediaRecorder.start();
             isRecording = true;
             visualize(stream);
@@ -139,6 +152,9 @@
                 resultText.style.color = 'green';
             }
             emotionText.textContent = `Detected Emotion: ${data.emotion}`;
+            // emotionText.style.color = 'orange';
+            probabilityText.textContent = `Probability Rate: ${(data.probability * 100).toFixed(2)}%`;
+            probabilityText.style.color = 'blue';
         }
 
         recordBtn.addEventListener('click', () => {
@@ -154,24 +170,33 @@
 
         // Functionality for uploading a file
         uploadForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const audioFile = document.getElementById('audioFile').files[0];
-            if (!audioFile) {
-                resultText.textContent = 'Please upload a valid audio file.';
-                return;
-            }
+    e.preventDefault();
 
-            const formData = new FormData();
-            formData.append('audio', audioFile);
+    // Get the selected model from radio buttons
+    const selectedModel = document.querySelector('input[name="model"]:checked').value;
+    
+    const audioFile = document.getElementById('audioFile').files[0];
+    if (!audioFile) {
+        resultText.textContent = 'Please upload a valid audio file.';
+        return;
+    }
 
-            const response = await fetch('/analyze', {
-                method: 'POST',
-                body: formData
-            });
+    const formData = new FormData();
+    formData.append('audio', audioFile);
+    formData.append('model', selectedModel);  // Append the selected model to the form data
 
-            const data = await response.json();
-            displayResults(data);
-        });
+    const response = await fetch('/analyze', {
+        method: 'POST',
+        body: formData
+    });
+
+    const data = await response.json();
+    resultText.textContent = '';
+    emotionText.textContent = '';
+    probabilityText.textContent = '';
+    displayResults(data);
+});
+
     </script>
 </body>
 </html>
