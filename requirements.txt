@@ -5,7 +5,7 @@ tensorflow-cpu
 tensorflow
 keras==3.3.3
 librosa==0.10.2
-numba==0.56.0
+numba
 matplotlib==3.8.1
 soundfile
 gunicorn
