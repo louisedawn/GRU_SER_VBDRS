@@ -21,7 +21,7 @@ enhanced_model = load_model(ENHANCED_MODEL_PATH)
 emotion_labels = ['Fear', 'Angry', 'Disgust', 'Neutral', 'Sad', 'Pleasantly Surprised', 'Happy']
 
 def preprocess_audio(file_path, model_type='original'):
-    y, sr = librosa.load(file_path, duration=3, offset=0.5)
+    y, sr = librosa.load(file_path, sr=16000, mono=True, duration=3, offset=0.5)
     
     # For the original model, we use 10 MFCC features
     # For the enhanced model, we use 1 MFCC feature per time step
