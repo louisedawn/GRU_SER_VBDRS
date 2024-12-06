@@ -12,7 +12,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Load GRU models
 ORIGINAL_MODEL_PATH = 'gru_model_not_optimized.h5'
-ENHANCED_MODEL_PATH = 'gru_original_model.h5'
+ENHANCED_MODEL_PATH = 'original_gru_model.h5'
 
 original_model = load_model(ORIGINAL_MODEL_PATH)
 enhanced_model = load_model(ENHANCED_MODEL_PATH)
