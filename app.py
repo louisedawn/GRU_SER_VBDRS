@@ -5,6 +5,7 @@ import librosa
 import numpy as np
 from keras.models import load_model
 import time  # Import time module to measure duration
+import soundfile as sf
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = './uploads'
@@ -20,21 +21,22 @@ enhanced_model = load_model(ENHANCED_MODEL_PATH)
 # Emotion labels
 emotion_labels = ['Fear', 'Angry', 'Disgust', 'Neutral', 'Sad', 'Pleasantly Surprised', 'Happy']
 
+
 def preprocess_audio(file_path, model_type='original'):
-    y, sr = librosa.load(file_path, sr=16000, mono=True, duration=3, offset=0.5)
-    
-    # For the original model, we use 10 MFCC features
-    # For the enhanced model, we use 1 MFCC feature per time step
+    # Use soundfile to load the audio file in chunks or limited duration
+    y, sr = sf.read(file_path, start=int(0.5 * 16000), frames=int(3 * 16000))
+
     if model_type == 'original':
-        mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=1)  # 10 features per time step for the original model
+        mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=1)  # 1 feature per time step for the original model
     else:
         mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=1)  # 1 feature per time step for the enhanced model
 
     # Ensure 100 frames (padding/truncating as needed)
-    mfcc = librosa.util.fix_length(mfcc, size=100, axis=1)  # Fix along time axis
+    mfcc = librosa.util.fix_length(mfcc, size=100, axis=1)
 
     # Reshape for model input: (batch_size, time_steps, features)
     return np.expand_dims(mfcc.T, axis=0)
+
 
 @app.route('/')
 def index():
