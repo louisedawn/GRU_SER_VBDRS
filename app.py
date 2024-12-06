@@ -5,7 +5,6 @@ import librosa
 import numpy as np
 from keras.models import load_model
 import time  # Import time module to measure duration
-import soundfile as sf
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = './uploads'
@@ -13,7 +12,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Load GRU models
 ORIGINAL_MODEL_PATH = 'gru_model_not_optimized.h5'
-ENHANCED_MODEL_PATH = 'original_gru_model.h5'
+ENHANCED_MODEL_PATH = 'gru_model_ENHANCED-not_final.h5'
 
 original_model = load_model(ORIGINAL_MODEL_PATH)
 enhanced_model = load_model(ENHANCED_MODEL_PATH)
@@ -21,22 +20,21 @@ enhanced_model = load_model(ENHANCED_MODEL_PATH)
 # Emotion labels
 emotion_labels = ['Fear', 'Angry', 'Disgust', 'Neutral', 'Sad', 'Pleasantly Surprised', 'Happy']
 
-
 def preprocess_audio(file_path, model_type='original'):
-    # Use soundfile to load the audio file in chunks or limited duration
-    y, sr = sf.read(file_path, start=int(0.5 * 16000), frames=int(3 * 16000))
-
+    y, sr = librosa.load(file_path, duration=3, offset=0.5)
+    
+    # For the original model, we use 10 MFCC features
+    # For the enhanced model, we use 1 MFCC feature per time step
     if model_type == 'original':
-        mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=1)  # 1 feature per time step for the original model
+        mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=1)  # change n_mfcc for input shape of features per time step for the original model
     else:
-        mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=1)  # 1 feature per time step for the enhanced model
+        mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=1)  # change n_mfcc for input shape of feature per time step for the enhanced model
 
     # Ensure 100 frames (padding/truncating as needed)
-    mfcc = librosa.util.fix_length(mfcc, size=100, axis=1)
+    mfcc = librosa.util.fix_length(mfcc, size=100, axis=1)  # Fix along time axis
 
     # Reshape for model input: (batch_size, time_steps, features)
     return np.expand_dims(mfcc.T, axis=0)
-
 
 @app.route('/')
 def index():
